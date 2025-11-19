@@ -57,47 +57,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
-  const login = (responseData: any) => {
-    try {
-      console.log("AuthContext login called with:", responseData);
-      
-      // Store authentication data
-      localStorage.setItem("accessToken", responseData.accessToken);
-      localStorage.setItem("refreshToken", responseData.refreshToken);
-      localStorage.setItem("user", JSON.stringify(responseData.user));
 
-      // Update state
-      setUser(responseData.user);
+const login = (responseData: any) => {
+  try {
+    console.log("AuthContext login called with:", responseData);
+    
+    // ✅ FIXED: Extract data from responseData.data
+    const { accessToken, refreshToken, user } = responseData.data;
+    
+    if (typeof window !== "undefined") {
+      // Store in localStorage for client-side access
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      localStorage.setItem("user", JSON.stringify(user));
 
-      console.log("Login successful, redirecting to dashboard...");
-      
-      // Redirect to dashboard
-      router.push("/dashboard");
-      router.refresh(); // Refresh to update any server components
-      
-    } catch (error) {
-      console.error("Error during login:", error);
+      // ✅ ALSO STORE IN COOKIES for middleware access
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=2592000`; // 30 days
+      document.cookie = `refreshToken=${refreshToken}; path=/; max-age=2592000`;
     }
-  };
+
+    setUser(user);
+
+    console.log("Login successful, redirecting to dashboard...");
+    
+    // Redirect to dashboard
+    router.push("/dashboard");
+    router.refresh();
+    
+  } catch (error) {
+    console.error("Error during login:", error);
+  }
+};
 
   const logout = () => {
-    try {
-      // Clear all authentication data
+  try {
+    if (typeof window !== "undefined") {
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       
-      // Update state
-      setUser(null);
-      
-      // Redirect to login page
-      router.push("/login");
-      router.refresh();
-      
-    } catch (error) {
-      console.error("Error during logout:", error);
+      // Also clear cookies
+      document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
-  };
+    setUser(null);
+    router.push("/login");
+    router.refresh();
+  } catch (error) {
+    console.error("Error during logout:", error);
+  }
+};
 
   const value = {
     user,
