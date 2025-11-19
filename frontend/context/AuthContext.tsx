@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const userData = localStorage.getItem("user");
         const token = localStorage.getItem("accessToken");
-        
+
         if (userData && token) {
           setUser(JSON.parse(userData));
         }
@@ -57,56 +57,84 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
   }, []);
 
+  const login = (responseData: any) => {
+    try {
+      console.log("🔍 [AuthContext] Login function called");
 
-const login = (responseData: any) => {
-  try {
-    console.log("AuthContext login called with:", responseData);
-    
-    // ✅ FIXED: Extract data from responseData.data
-    const { accessToken, refreshToken, user } = responseData.data;
-    
-    if (typeof window !== "undefined") {
-      // Store in localStorage for client-side access
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("user", JSON.stringify(user));
+      const { accessToken, refreshToken, user } = responseData.data;
 
-      // ✅ ALSO STORE IN COOKIES for middleware access
-      document.cookie = `accessToken=${accessToken}; path=/; max-age=2592000`; // 30 days
-      document.cookie = `refreshToken=${refreshToken}; path=/; max-age=2592000`;
+      console.log(
+        "🔍 [AuthContext] Extracted accessToken length:",
+        accessToken?.length
+      );
+
+      if (typeof window !== "undefined") {
+        // Store in localStorage
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        localStorage.setItem("user", JSON.stringify(user));
+
+        // Store in cookies
+        const cookieOptions = `path=/; max-age=2592000; SameSite=Lax`;
+        document.cookie = `accessToken=${accessToken}; ${cookieOptions}`;
+        document.cookie = `refreshToken=${refreshToken}; ${cookieOptions}`;
+
+        console.log("🔍 [AuthContext] Cookies after setting:", document.cookie);
+      }
+
+      setUser(user);
+
+      console.log("🔍 [AuthContext] Login successful, redirecting...");
+
+      // Use window.location for guaranteed redirect
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 100);
+    } catch (error) {
+      console.error("❌ [AuthContext] Error during login:", error);
     }
-
-    setUser(user);
-
-    console.log("Login successful, redirecting to dashboard...");
-    
-    // Redirect to dashboard
-    router.push("/dashboard");
-    router.refresh();
-    
-  } catch (error) {
-    console.error("Error during login:", error);
-  }
-};
-
+  };
   const logout = () => {
-  try {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("user");
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      
-      // Also clear cookies
-      document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      document.cookie = "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    try {
+      console.log("🔍 [AuthContext] Logout function called");
+
+      if (typeof window !== "undefined") {
+        // Clear localStorage
+        localStorage.removeItem("user");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+
+        // Clear cookies
+        document.cookie =
+          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie =
+          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie =
+          "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+        console.log(
+          "🔍 [AuthContext] After logout - localStorage user:",
+          localStorage.getItem("user")
+        );
+        console.log(
+          "🔍 [AuthContext] After logout - cookies:",
+          document.cookie
+        );
+      }
+
+      // Clear state
+      setUser(null);
+
+      console.log("🔍 [AuthContext] Redirecting to login...");
+
+      // Use window.location for guaranteed redirect
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 100);
+    } catch (error) {
+      console.error("❌ [AuthContext] Error during logout:", error);
     }
-    setUser(null);
-    router.push("/login");
-    router.refresh();
-  } catch (error) {
-    console.error("Error during logout:", error);
-  }
-};
+  };
 
   const value = {
     user,
