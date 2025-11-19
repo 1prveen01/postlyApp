@@ -7,7 +7,7 @@ export const axiosInstance = axios.create({
 
 //Axios interceptors let you run code automatically before or after every request or response.
 axiosInstance.interceptors.request.use((config: any) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("accessToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

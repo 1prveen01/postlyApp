@@ -25,34 +25,41 @@ export default function LoginForm() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+const onSubmit = async (data: LoginFormData) => {
+  setIsLoading(true);
+  setError('');
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setError('');
+  try {
+    const response = await login({
+      email: data.email,
+      password: data.password,
+    });
 
-    try {
-      const response = await login({
-        email: data.email,
-        password: data.password,
-      });
-      
-      // Store access token (cookies are handled automatically by backend)
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
-      }
+    const accessToken = response.data?.accessToken || response.data?.data?.accessToken;
+    const refreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
 
-      // Success - redirect to dashboard
-      router.push('/dashboard');
-    } catch (err: any) {
-      console.error('Login failed:', err);
-      setError(
-        err.response?.data?.message || 
-        'Login failed. Please check your credentials.'
-      );
-    } finally {
-      setIsLoading(false);
+    if (!accessToken) {
+      throw new Error("No access token received");
     }
-  };
+
+    // Save tokens
+    localStorage.setItem("accessToken", accessToken);
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    router.push('/dashboard');
+  } catch (err: any) {
+    console.error('Login failed:', err);
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      'Login failed. Please check your credentials.'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
