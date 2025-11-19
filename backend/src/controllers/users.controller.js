@@ -25,47 +25,31 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  //get user detail from frontend
   const { fullName, username, email, password } = req.body;
-  console.log("req.body is : ", req.body.email);
 
-  //check for empty string
-  if (
-    [username, email, password, fullName].some((field) => field?.trim() === " ")
-  ) {
+  if ([username, email, password, fullName].some((field) => field?.trim() === "")) {
     throw new apiError(400, "All fields are required");
   }
 
-  //validation for existing user
   const exitedUser = await User.findOne({
     $or: [{ username }, { email }],
   });
 
   if (exitedUser) {
-    throw new apiError(409, "User with username or email already exits ");
+    throw new apiError(409, "User with username or email already exists");
   }
 
-  //check for avatar
-  console.log("req files is: ", req.files.avatar);
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  // const coverImageLocalPath = req.files?.coverImage[0]?.path;
-  console.log(avatarLocalPath);
+  const avatarLocalPath = req.files?.avatar?.[0]?.path;
 
   if (!avatarLocalPath) {
-    throw new apiError(400, "Avatar file is required ");
+    throw new apiError(400, "Avatar file is required");
   }
 
-  
-
-  // upload on cloudinary
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  //check avatar is required
   if (!avatar) {
     throw new apiError(400, "Avatar is required field");
   }
 
-  //create user in database
   const user = await User.create({
     fullName,
     avatar: avatar.url,
@@ -74,19 +58,38 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
   });
 
-  // removing password and refreshToken fields from response
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+  const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
-  //check user is created successfully
   if (!createdUser) {
     throw new apiError(500, "Something went wrong while registering the user");
   }
 
+  // 👉 Generate Tokens
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+  // 👉 Set Cookies
+  const options = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+
   return res
     .status(201)
-    .json(new apiResponse(200, createdUser, "User Created Successfully "));
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new apiResponse(
+        201,
+        {
+          user: createdUser,
+          accessToken,
+          refreshToken,
+        },
+        "User Registered & Logged In Successfully"
+      )
+    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {
