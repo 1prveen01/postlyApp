@@ -6,9 +6,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { login } from '@/lib/axiosInstance';
 import { loginSchema, type LoginFormData } from '@/schemas/loginSchema';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { login: authLogin } = useAuth();
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,50 +23,56 @@ export default function LoginForm() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-  setIsLoading(true);
-  setError('');
+    setIsLoading(true);
+    setError('');
 
-  try {
-    const response = await login({
-      email: data.email,
-      password: data.password,
-    });
+    try {
+      console.log('Attempting login with:', data);
+      
+      const response = await login({
+        email: data.email,
+        password: data.password,
+      });
 
-    console.log('Login response:', response);
+      console.log('Login API response:', response);
 
-    // ✅ Don't save to localStorage - cookies are set automatically
-    // The backend already sets httpOnly cookies
-    
-    if (response.success || response.statusCode === 200) {
-      console.log('Login successful, redirecting...');
-      router.push('/dashboard');
-    } else {
-      throw new Error('Login failed');
+      if (response.success) {
+        console.log('Login successful, updating auth context...');
+        
+        // Update auth context (this will handle storage and state)
+        authLogin(response);
+        
+        // The redirect happens in AuthContext, but we'll add a backup
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 500);
+        
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (err: any) {
+      console.error('Login error details:', err);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Login failed. Please check your credentials.'
+      );
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err: any) {
-    console.error('Login failed:', err);
-    setError(
-      err.response?.data?.message ||
-      err.message ||
-      'Login failed. Please check your credentials.'
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {/* Error Message */}
+      {/* Your form JSX remains the same */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       )}
 
-      {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-xs  md:text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="email" className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
           Email
         </label>
         <input
@@ -73,7 +81,7 @@ export default function LoginForm() {
           id="email"
           placeholder="john@example.com"
           className={`w-full p-3 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none ${
-            errors.email ? 'border-red-500 focus:ring-transparent' : 'border-gray-300 '
+            errors.email ? 'border-red-500 focus:ring-transparent' : 'border-gray-300'
           }`}
         />
         {errors.email && (
@@ -81,9 +89,8 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* Password  */}
       <div>
-        <label htmlFor="password" className="block md:text-sm  text-xs font-medium text-gray-700 mb-1">
+        <label htmlFor="password" className="block md:text-sm text-xs font-medium text-gray-700 mb-1">
           Password
         </label>
         <input
@@ -100,21 +107,16 @@ export default function LoginForm() {
         )}
       </div>
 
-      {/* Submit Button */}
       <button
         type="submit"
         disabled={isLoading}
-        className={`w-full transition-all  bg-black duration-150 hover:bg-neutral-700 cursor-pointer hover:-translate-y-0.5 active:scale-95 text-white p-3 rounded font-medium 
-             ${
-          isLoading
-            ? 'bg-neutral-700 cursor-not-allowed'
-            : 'bg-black hover:bg-neutral-700'
+        className={`w-full transition-all bg-black duration-150 hover:bg-neutral-700 cursor-pointer hover:-translate-y-0.5 active:scale-95 text-white p-3 rounded font-medium ${
+          isLoading ? 'bg-neutral-700 cursor-not-allowed' : 'bg-black hover:bg-neutral-700'
         }`}
       >
         {isLoading ? 'Logging in...' : 'Login'}
       </button>
 
-      {/* Register Link */}
       <p className="text-center text-sm text-gray-600">
         Don't have an account?{' '}
         <a href="/register" className="text-blue-500 hover:underline font-medium">

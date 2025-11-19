@@ -6,17 +6,22 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 
 interface User {
-  id: string;
-  name: string;
+  _id: string;
+  username: string;
   email: string;
+  fullName: string;
+  avatar: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  login: (userData: User) => void;
+  login: (responseData: any) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -26,31 +31,72 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in on page load
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setIsLoading(false);
+    // Check authentication status on component mount
+    const checkAuth = () => {
+      try {
+        const userData = localStorage.getItem("user");
+        const token = localStorage.getItem("accessToken");
+        
+        if (userData && token) {
+          setUser(JSON.parse(userData));
+        }
+      } catch (error) {
+        console.error("Error checking auth:", error);
+        // Clear invalid data
+        localStorage.removeItem("user");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const login = (userData: User) => {
-    // Store in localStorage for client-side
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = (responseData: any) => {
+    try {
+      console.log("AuthContext login called with:", responseData);
+      
+      // Store authentication data
+      localStorage.setItem("accessToken", responseData.accessToken);
+      localStorage.setItem("refreshToken", responseData.refreshToken);
+      localStorage.setItem("user", JSON.stringify(responseData.user));
 
-    // Set a simple cookie for middleware (just a flag)
-    document.cookie = `auth=true; path=/; max-age=2592000`; // 30 days
+      // Update state
+      setUser(responseData.user);
 
-    setUser(userData);
+      console.log("Login successful, redirecting to dashboard...");
+      
+      // Redirect to dashboard
+      router.push("/dashboard");
+      router.refresh(); // Refresh to update any server components
+      
+    } catch (error) {
+      console.error("Error during login:", error);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
-    // Clear the auth cookie
-    document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    setUser(null);
+    try {
+      // Clear all authentication data
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      
+      // Update state
+      setUser(null);
+      
+      // Redirect to login page
+      router.push("/login");
+      router.refresh();
+      
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
   };
 
   const value = {
