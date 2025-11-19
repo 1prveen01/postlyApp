@@ -5,12 +5,12 @@ export const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-//Axios interceptors let you run code automatically before or after every request or response.
-axiosInstance.interceptors.request.use((config: any) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// //Axios interceptors let you run code automatically before or after every request or response.
+// axiosInstance.interceptors.request.use((config: any) => {
+//   const token = localStorage.getItem("accessToken");
+//   if (token) config.headers.Authorization = `Bearer ${token}`;
+//   return config;
+// });
 
 // Login
 export const login = async (credentials: {

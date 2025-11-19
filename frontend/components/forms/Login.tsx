@@ -12,12 +12,6 @@ export default function LoginForm() {
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-
-
-  
-
-
-
   const {
     register,
     handleSubmit,
@@ -25,7 +19,8 @@ export default function LoginForm() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
-const onSubmit = async (data: LoginFormData) => {
+
+  const onSubmit = async (data: LoginFormData) => {
   setIsLoading(true);
   setError('');
 
@@ -35,20 +30,17 @@ const onSubmit = async (data: LoginFormData) => {
       password: data.password,
     });
 
-    const accessToken = response.data?.accessToken || response.data?.data?.accessToken;
-    const refreshToken = response.data?.refreshToken || response.data?.data?.refreshToken;
+    console.log('Login response:', response);
 
-    if (!accessToken) {
-      throw new Error("No access token received");
+    // ✅ Don't save to localStorage - cookies are set automatically
+    // The backend already sets httpOnly cookies
+    
+    if (response.success || response.statusCode === 200) {
+      console.log('Login successful, redirecting...');
+      router.push('/dashboard');
+    } else {
+      throw new Error('Login failed');
     }
-
-    // Save tokens
-    localStorage.setItem("accessToken", accessToken);
-    if (refreshToken) {
-      localStorage.setItem("refreshToken", refreshToken);
-    }
-
-    router.push('/dashboard');
   } catch (err: any) {
     console.error('Login failed:', err);
     setError(
