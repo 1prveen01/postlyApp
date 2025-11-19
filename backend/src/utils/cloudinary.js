@@ -55,6 +55,8 @@ const getOptimizedUrl = (publicId) => {
   });
 };
 
+console.log("hello")
+
 // Transform the image: auto-crop to square aspect_ratio
 const getAutoCropUrl = (publicId, width = 500, height = 500) => {
   cloudinary.config({
