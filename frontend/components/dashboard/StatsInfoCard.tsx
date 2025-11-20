@@ -4,10 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MdOutlinePostAdd } from "react-icons/md";
 import { TiHeart } from "react-icons/ti";
-import { logout, getUserTweets, getLikedTweets } from "@/lib/axiosInstance";
+import { getUserTweets, getLikedTweets } from "@/lib/axiosInstance";
+import { useAuth } from '@/context/AuthContext';
 
 const StatsInfoCard = () => {
   const router = useRouter();
+  const { logout } = useAuth(); // Use logout from AuthContext
   const [totalPosts, setTotalPosts] = useState(0);
   const [likedPosts, setLikedPosts] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -66,17 +68,13 @@ const StatsInfoCard = () => {
     return () => window.removeEventListener("updateStats", handleUpdate);
   }, []);
 
-  // ✅ Handle logout
+  // ✅ Handle logout using AuthContext
   const handleLogout = async () => {
     try {
-      await logout();
+      console.log("🔍 [StatsInfoCard] Logout initiated");
+      logout(); // This will handle everything including redirect
     } catch (error) {
-      console.error("Logout failed:", error);
-    } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      router.push("/");
-      router.refresh();
+      console.error("❌ [StatsInfoCard] Logout failed:", error);
     }
   };
 

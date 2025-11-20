@@ -7,7 +7,7 @@ import UserInfoCard from "@/components/dashboard/UserInfoCard";
 import { useEffect } from 'react';
 
 const Page = () => {
-  const { user, isLoggedIn, logout, isLoading } = useAuth();
+  const { user, isLoggedIn, isLoading } = useAuth();
 
   // Check authentication status
   useEffect(() => {
@@ -34,12 +34,12 @@ const Page = () => {
   if (!isLoggedIn) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-r from-blue-100 via-white to-blue-200 flex justify-center items-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
+        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md hover:t">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-6">Please log in to access the dashboard</p>
           <button 
             onClick={() => window.location.href = "/login"}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
+            className="bg-black hover:bg-neutral-800 text-white px-6 py-2 rounded-sm hover:-translate-y-0.5 active:scale-95 transition-colors"
           >
             Go to Login
           </button>
@@ -50,20 +50,7 @@ const Page = () => {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-r from-blue-100 via-white to-blue-200">
-      {/* Logout Button */}
-      <div className="w-full flex justify-end p-4">
-        <button 
-          onClick={logout}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-colors flex items-center space-x-2"
-        >
-          <span>Logout</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Dashboard Content */}
+      {/* Dashboard Content - No logout button here anymore */}
       <div className="w-full max-w-4xl p-4 md:p-8 border-l-2 border-gray-400 shadow-lg shadow-gray-900 bg-transparent grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min mx-auto">
        
         {/* Row 1 */}
