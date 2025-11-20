@@ -154,33 +154,27 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 });
-
 const logoutUser = asyncHandler(async (req, res) => {
   await User.findOneAndUpdate(
     req.user._id,
-    {
-      $unset: {
-        refreshToken: 1,
-      },
-    },
-    {
-      new: true,
-    }
+    { $unset: { refreshToken: 1 } },
+    { new: true }
   );
 
-  const options = {
+  const cookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "none", // allow cross-origin (Vercel <-> Render)
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    sameSite: "none",
+    path: "/",        
   };
 
   res
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
     .json(new apiResponse(200, {}, "User logged Out"));
 });
+
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
