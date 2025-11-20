@@ -34,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Check authentication status on component mount
     const checkAuth = () => {
       try {
         const userData = localStorage.getItem("user");
@@ -45,7 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error("Error checking auth:", error);
-        // Clear invalid data
         localStorage.removeItem("user");
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -63,76 +61,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const { accessToken, refreshToken, user } = responseData.data;
 
-      console.log(
-        "🔍 [AuthContext] Extracted accessToken length:",
-        accessToken?.length
-      );
-
       if (typeof window !== "undefined") {
-        // Store in localStorage
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("user", JSON.stringify(user));
 
-        // Store in cookies
         const cookieOptions = `path=/; max-age=2592000; SameSite=Lax`;
         document.cookie = `accessToken=${accessToken}; ${cookieOptions}`;
         document.cookie = `refreshToken=${refreshToken}; ${cookieOptions}`;
-
-        console.log("🔍 [AuthContext] Cookies after setting:", document.cookie);
       }
 
       setUser(user);
 
       console.log("🔍 [AuthContext] Login successful, redirecting...");
 
-      // Use window.location for guaranteed redirect
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 100);
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error("❌ [AuthContext] Error during login:", error);
     }
   };
+
   const logout = () => {
     try {
       console.log("🔍 [AuthContext] Logout function called");
 
-      if (typeof window !== "undefined") {
-        // Clear localStorage
-        localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-
-        // Clear cookies
-        document.cookie =
-          "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie =
-          "refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie =
-          "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-
-        console.log(
-          "🔍 [AuthContext] After logout - localStorage user:",
-          localStorage.getItem("user")
-        );
-        console.log(
-          "🔍 [AuthContext] After logout - cookies:",
-          document.cookie
-        );
-      }
-
-      // Clear state
+      // Clear React state FIRST
       setUser(null);
+
+      if (typeof window !== "undefined") {
+        // Clear all storage
+        localStorage.clear();
+        
+        // Clear all cookies completely
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i];
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        }
+      }
 
       console.log("🔍 [AuthContext] Redirecting to login...");
 
-      // Use window.location for guaranteed redirect
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 100);
+      // Force full page reload to reset everything
+      window.location.href = "/login";
+      window.location.reload();
+
     } catch (error) {
       console.error("❌ [AuthContext] Error during logout:", error);
+      window.location.href = "/login";
     }
   };
 
