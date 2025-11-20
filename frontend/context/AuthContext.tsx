@@ -1,4 +1,5 @@
 "use client";
+
 import React, {
   createContext,
   useContext,
@@ -7,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface User {
   _id: string;
@@ -22,7 +24,7 @@ interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
   login: (responseData: any) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -33,102 +35,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // Restore user on page refresh
   useEffect(() => {
-    const checkAuth = () => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
       try {
-        const userData = localStorage.getItem("user");
-        const token = localStorage.getItem("accessToken");
-
-        if (userData && token) {
-          setUser(JSON.parse(userData));
-        }
-      } catch (error) {
-        console.error("Error checking auth:", error);
+        setUser(JSON.parse(storedUser));
+      } catch {
         localStorage.removeItem("user");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    checkAuth();
+    }
+    setIsLoading(false);
   }, []);
 
+  // LOGIN (only store user, backend handles cookies)
   const login = (responseData: any) => {
     try {
-      console.log("🔍 [AuthContext] Login function called");
+      const { user } = responseData.data;
 
-      const { accessToken, refreshToken, user } = responseData.data;
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        const cookieOptions = `path=/; max-age=2592000; SameSite=Lax`;
-        document.cookie = `accessToken=${accessToken}; ${cookieOptions}`;
-        document.cookie = `refreshToken=${refreshToken}; ${cookieOptions}`;
-      }
-
+      localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
 
-      console.log("🔍 [AuthContext] Login successful, redirecting...");
-
+      // redirect
       window.location.href = "/dashboard";
-    } catch (error) {
-      console.error("❌ [AuthContext] Error during login:", error);
+    } catch (err) {
+      console.error("Login error:", err);
     }
   };
 
-  const logout = () => {
+  // LOGOUT (call backend to clear cookies + clear frontend user)
+  const logout = async () => {
     try {
-      console.log("🔍 [AuthContext] Logout function called");
-
-      // Clear React state FIRST
-      setUser(null);
-
-      if (typeof window !== "undefined") {
-        // Clear all storage
-        localStorage.clear();
-        
-        // Clear all cookies completely
-        const cookies = document.cookie.split(";");
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i];
-          const eqPos = cookie.indexOf("=");
-          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        }
-      }
-
-      console.log("🔍 [AuthContext] Redirecting to login...");
-
-      // Force full page reload to reset everything
-      window.location.href = "/login";
-      window.location.reload();
-
-    } catch (error) {
-      console.error("❌ [AuthContext] Error during logout:", error);
-      window.location.href = "/login";
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/users/logout`,
+        {},
+        { withCredentials: true }
+      );
+    } catch (err) {
+      console.warn("Logout request failed — clearing session anyway.");
     }
+
+    localStorage.removeItem("user");
+    setUser(null);
+
+    window.location.href = "/login";
   };
 
-  const value = {
-    user,
-    isLoggedIn: !!user,
-    login,
-    logout,
-    isLoading,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoggedIn: !!user,
+        login,
+        logout,
+        isLoading,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
 };
